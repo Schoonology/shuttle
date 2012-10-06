@@ -17,7 +17,7 @@ describe('Consumer-Service Relationship', function () {
 
     beforeEach(function () {
         // Using the IPC transport instead of TCP as TCP causes race conditions when used within the same process.
-        this.url = 'ipc:///tmp/' + Math.random().toString().slice(2);
+        this.url = '/tmp/' + Math.random().toString().slice(2);
     });
 
     afterEach(function () {
