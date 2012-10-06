@@ -50,4 +50,18 @@ describe('Consumer-Service Relationship', function () {
             done();
         });
     });
+
+    it('should error if the event does not exist', function (done) {
+        this.consumer.listen(this.url);
+        this.service.connect(this.url);
+
+        this.consumer.send('does not exist', {
+            answer: 42
+        }, function (err, response) {
+            expect(err).to.exist;
+            expect(err).to.have.property('message', 'No such event');
+            expect(response).to.not.exist;
+            done();
+        });
+    });
 });
