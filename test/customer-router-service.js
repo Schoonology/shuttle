@@ -28,13 +28,28 @@ describe('Consumer-Router-Service Relationship', function () {
         this.consumer.close();
     });
 
-    it('should support Router listening, Service and Consumer connecting', function (done) {
-        this.router.listenForServices(this.serviceUrl);
+    it('should support Router listening, Service and Consumer connecting (no name)', function (done) {
+        this.router.listenForServices(null, this.serviceUrl);
         this.router.listenForConsumers(this.consumerUrl);
         this.service.connect(this.serviceUrl);
         this.consumer.connect(this.consumerUrl);
 
         this.consumer.send('test', {
+            answer: 42
+        }, function (err, response) {
+            expect(err).to.not.exist;
+            expect(response).to.have.property('ok', true);
+            done();
+        });
+    });
+
+    it('should support Router listening, Service and Consumer connecting (named)', function (done) {
+        this.router.listenForServices('test', this.serviceUrl);
+        this.router.listenForConsumers(this.consumerUrl);
+        this.service.connect(this.serviceUrl);
+        this.consumer.connect(this.consumerUrl);
+
+        this.consumer.send('test:test', {
             answer: 42
         }, function (err, response) {
             expect(err).to.not.exist;
