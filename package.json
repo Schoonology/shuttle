@@ -1,0 +1,26 @@
+{
+  "name": "shuttle",
+  "version": "0.1.0",
+  "description": "A massively-distributable, service-oriented architecture with all the flexibility of Node.",
+  "main": "index.js",
+  "dependencies": {
+    "msgpack3": "~0.1.2",
+    "zmq": "~2.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Schoonology/shuttle.git"
+  },
+  "keywords": [
+    "distributed",
+    "service",
+    "cluster",
+    "architecture"
+  ],
+  "author": "Michael Schoonmaker <michael.r.schoonmaker@gmail.com>",
+  "license": "MIT"
+}
