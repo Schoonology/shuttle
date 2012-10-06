@@ -10,7 +10,7 @@ describe('Consumer-Router-Service Relationship', function () {
 
         this.service.on('test', function (data, callback) {
             expect(data).to.have.property('answer', 42);
-            callback({
+            callback(null, {
                 ok: true
             });
         });
