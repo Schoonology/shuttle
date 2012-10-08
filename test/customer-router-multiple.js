@@ -45,7 +45,7 @@ describe('Consumer-Router-MultiService Relationship', function () {
         self.notOk.connect(self.serviceUrl);
         self.consumer.connect(self.consumerUrl);
 
-        self.consumer.send('test::test', {
+        self.consumer.emit('test::test', {
             answer: 42
         }, function (err, response) {
             var first;
@@ -56,7 +56,7 @@ describe('Consumer-Router-MultiService Relationship', function () {
             first = response.ok;
             expect(first).to.be.a('boolean');
 
-            self.consumer.send('test::test', {
+            self.consumer.emit('test::test', {
                 answer: 42
             }, function (err, response) {
                 var second;

@@ -29,7 +29,7 @@ describe('Consumer-Service Relationship', function () {
         this.service.listen(this.url);
         this.consumer.connect(this.url);
 
-        this.consumer.send('test', {
+        this.consumer.emit('test', {
             answer: 42
         }, function (err, response) {
             expect(err).to.not.exist;
@@ -42,7 +42,7 @@ describe('Consumer-Service Relationship', function () {
         this.consumer.listen(this.url);
         this.service.connect(this.url);
 
-        this.consumer.send('test', {
+        this.consumer.emit('test', {
             answer: 42
         }, function (err, response) {
             expect(err).to.not.exist;
@@ -55,7 +55,7 @@ describe('Consumer-Service Relationship', function () {
         this.consumer.listen(this.url);
         this.service.connect(this.url);
 
-        this.consumer.send('does not exist', {
+        this.consumer.emit('does not exist', {
             answer: 42
         }, function (err, response) {
             expect(err).to.exist;

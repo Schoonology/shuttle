@@ -34,7 +34,7 @@ describe('Consumer-Router-Service Relationship', function () {
         this.service.connect(this.serviceUrl);
         this.consumer.connect(this.consumerUrl);
 
-        this.consumer.send('test', {
+        this.consumer.emit('test', {
             answer: 42
         }, function (err, response) {
             expect(err).to.not.exist;
@@ -49,7 +49,7 @@ describe('Consumer-Router-Service Relationship', function () {
         this.service.connect(this.serviceUrl);
         this.consumer.connect(this.consumerUrl);
 
-        this.consumer.send('test::test', {
+        this.consumer.emit('test::test', {
             answer: 42
         }, function (err, response) {
             expect(err).to.not.exist;
