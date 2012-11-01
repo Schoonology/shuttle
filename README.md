@@ -4,6 +4,15 @@ A massively-distributable, service-oriented architecture with all the flexibilit
 
 ## Installation
 
+Before you can install shuttle with NPM, you need to have the ZeroMQ sources installed locally. This will be a platform-dependent task, but most platforms have tools to make this easier:
+
+```bash
+brew install zeromq
+yum install zeromq-devel
+```
+
+After that's ready, npm can be used as normal:
+
 ```bash
 npm install shuttle
 ```
@@ -25,7 +34,7 @@ The classes used by Shuttle are purposefully simple:
 
 ### Consumer & Service
 
-The Consumer sends events round-robin to all Services, which in turn listen on these events, firing the provided callback either as acknowledgement (required) or with the desired additional result.
+The Consumer emits events round-robin to all Services, which in turn listen on these events, firing the provided callback either as acknowledgement (required) or with the desired additional result.
 
 ```javascript
 var consumer = new shuttle.Consumer(),
@@ -39,7 +48,35 @@ service.on('test', function (data, callback) {
     callback(null, { ok: true });
 });
 
-consumer.send('test', { answer: 42 }, function (err, response) {
+consumer.emit('test', { answer: 42 }, function (err, response) {
+    console.log('Error?', !!err);
+    console.log('Response:', response);
+});
+
+// Output:
+//
+// Test: { answer: 42 }
+// Error? false
+// Response: { ok: true }
+```
+
+### Prosumer
+
+The Prosumer is both a Service and Consumer in one. It can emit events like a Consumer and listen on events like a Service.
+
+```javascript
+var prosumer1 = new shuttle.Prosumer(),
+    prosumer2 = new shuttle.Prosumer();
+
+prosumer2.listenForConsumers(5050);
+prosumer1.connectToService(5050);
+
+prosumer2.on('test', function (data, callback) {
+    console.log('Test:', data);
+    callback(null, { ok: true });
+});
+
+prosumer1.emit('test', { answer: 42 }, function (err, response) {
     console.log('Error?', !!err);
     console.log('Response:', response);
 });
@@ -71,7 +108,7 @@ service.on('test', function (data, callback) {
     callback(null, { ok: true });
 });
 
-consumer.send('test', { answer: 42 }, function (err, response) {
+consumer.emit('test', { answer: 42 }, function (err, response) {
     console.log('Error?', !!err);
     console.log('Response:', response);
 });
@@ -108,7 +145,7 @@ service.on('test', function (data, callback) {
     callback(null, { ok: true });
 });
 
-consumer.send('test/test', { answer: 42 }, function (err, response) {
+consumer.emit('test/test', { answer: 42 }, function (err, response) {
     console.log('Error?', !!err);
     console.log('Response:', response);
 });
