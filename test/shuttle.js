@@ -3,6 +3,7 @@ var shuttle = require('../')
   , expect = require('chai').expect
 
 function generateTestUrl() {
+  // return 'tcp://127.0.0.1:' + (16000 + Math.floor(Math.random() * 1000))
   return 'ipc:///tmp/' + Math.random().toString().slice(2)
 }
 
