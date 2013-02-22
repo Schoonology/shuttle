@@ -40,13 +40,43 @@ describe('Shuttle', function () {
     })
   })
 
+  describe('Broadcast', function () {
+    beforeEach(function () {
+      this.emitter = shuttle.createBroadcastEmitter()
+      this.handler = shuttle.createBroadcastHandler()
+
+      this.url = generateTestUrl()
+
+      this.emitter.listenForBroadcasts({
+        url: this.url
+      })
+
+      this.handler.connectForBroadcasts({
+        url: this.url
+      })
+    })
+
+    afterEach(function () {
+      this.emitter.close()
+      this.handler.close()
+    })
+
+    it('should work', function (done) {
+      this.handler.on('bcast', function (data) {
+        expect(data).to.have.property('test', true)
+        done()
+      })
+
+      this.emitter.emit('bcast', {
+        test: true
+      })
+    })
+  })
+
   describe('Synchronization', function () {
     beforeEach(function () {
       this.emitter = shuttle.createSynchronizationEmitter()
       this.handler = shuttle.createSynchronizationHandler()
-
-      console.log(this.emitter.constructor.name)
-      console.log(this.handler.constructor.name)
 
       this.requestUrl = generateTestUrl()
       this.synchronizationUrl = generateTestUrl()
