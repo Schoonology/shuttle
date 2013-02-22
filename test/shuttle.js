@@ -1,13 +1,70 @@
 /*global describe:true, it:true, before:true, after:true, beforeEach:true, afterEach:true */
-var fork = require('child_process').fork,
-    path = require('path'),
-    expect = require('chai').expect,
-    stepdown = require('stepdown'),
-    shuttle = require('../');
+var shuttle = require('../')
+  , expect = require('chai').expect
 
 function generateTestUrl() {
-    return '/tmp/' + Math.random().toString().slice(2);
+  return 'ipc:///tmp/' + Math.random().toString().slice(2)
 }
+
+describe('Shuttle', function () {
+  describe('Request', function () {
+    beforeEach(function () {
+      this.emitter = shuttle.createRequestEmitter()
+      this.handler = shuttle.createRequestHandler()
+      this.url = generateTestUrl()
+
+      this.handler.listenForRequests({
+        url: this.url
+      })
+      this.emitter.connectForRequests({
+        url: this.url
+      })
+    })
+
+    afterEach(function () {
+      this.emitter.close()
+      this.handler.close()
+    })
+
+    it('should work', function (done) {
+      this.handler.on('echo', function (data, callback) {
+        callback(null, data)
+      })
+
+      this.emitter.emit('echo', {
+        test: true
+      }, function (err, response) {
+        expect(response).to.have.property('test', true)
+        done(err)
+      })
+    })
+  })
+
+  describe('Synchronization', function () {
+    it('should work')
+  })
+})
+
+/*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var fork = require('child_process').fork,
+    path = require('path'),
+    stepdown = require('stepdown'),
+    shuttle = require('../');
 
 function startChild(name, env) {
     return fork(path.join(__dirname, 'fixtures', name), [], {
@@ -191,3 +248,4 @@ describe('Shuttle', function () {
         it('should support Prosumer-Router-Prosumer', generateEchoTest('prosumer', 'prosumer'));
     });
 });
+*/

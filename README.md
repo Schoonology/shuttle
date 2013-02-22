@@ -4,163 +4,72 @@ A massively-distributable, service-oriented architecture with all the flexibilit
 
 ## Installation
 
-Before you can install shuttle with NPM, you need to have the ZeroMQ sources installed locally. This will be a platform-dependent task, but most platforms have tools to make this easier:
+Before you can install Shuttle with NPM, you need to have the development source for ZeroMQ 3.2.x installed locally. This will be a platform-dependent task, but most platforms have tools to make this easier:
 
 ```bash
-brew install zeromq
+brew install zeromq --devel
 yum install zeromq-devel
 ```
 
-After that's ready, npm can be used as normal:
+After that's ready, npm can be used as normal to install Shuttle:
 
 ```bash
 npm install shuttle
 ```
 
-## Connection
+## Transports
 
-Before going into what the various classes are, it's important to note an important feature of Shuttle: Either side of any connection can act as the listener, with the other connecting. For example, a Service can connect to a listening Consumer or a Consumer can connect to a listening Service. This is accomplished with two methods, available on each class:
+Shuttle officially supports and has been tested over the following transports:
 
- * listen(url) - Listen on the interface and port provided as a TCP URL (e.g. tcp://127.0.0.1:3000).
- * listen(path) - Listen on the IPC interface provided as a file path (e.g. /tmp/shuttletest).
- * listen(port, [host]) - Listen on the optional `host` interface (defaults to '*') at `port`.
- * connect(url) - Connect to the endpoint at the specified TCP URL.
- * connect(path) - Connect to the endpoint at the specified IPC path.
- * connect(port, [host]) - Connect to the endpoint at the optional `host` interface (defaults to '*') at `port`.
+ * IPC (`ipc://`)
+ * TCP (`tcp://`)
 
-## Classes
+While these have not been tested, Shuttle may also work over the following transports:
 
-The classes used by Shuttle are purposefully simple:
+ * Intra-process (`inproc://`)
+ * PGM (`pgm://`)
+ * EPGM (`epgm://`)
 
-### Consumer & Service
+In the remainder of the documentation, "port" refers to a single interface on a single transport, even if that interface is not TPC. If documentation mentions "two ports" and you intend to use IPC, for example, you will need two file descriptors, e.g. `/tmp/a` and `/tmp/b`.
 
-The Consumer emits events round-robin to all Services, which in turn listen on these events, firing the provided callback either as acknowledgement (required) or with the desired additional result.
+## Mesh
 
-```javascript
-var consumer = new shuttle.Consumer(),
-    service = new shuttle.Service();
+The Shuttle "mesh" consists of Services and Consumers connected _directly_ to one another, with Consumers making requests and getting updates and Services sending responses and sending updates. Unlike other service-oriented architectures (and early versions of Shuttle), _Shuttle is brokerless._
 
-service.listen(5050);
-consumer.connect(5050);
+There are two types of Services, with corresponding Consumers: RequestServices (with RequestConsumers) and SynchronizationServices (with SynchronizationConsumers).
 
-service.on('test', function (data, callback) {
-    console.log('Test:', data);
-    callback(null, { ok: true });
-});
+There should be a 1:1 relationship between Consumer instances and Service types. A Consumer can be connected to multiple of the same service, but should not be connected to multiple types of Services. Create another Consumer instance for the second Service type needed (and so forth). To make this design restriction easier, MIXIN_THINGs can be used to consolidate multiple Consumer instances into a single, easier-to-use interface. (If desired, the same can be done of Services, even with the same MIXIN_THING.)
 
-consumer.emit('test', { answer: 42 }, function (err, response) {
-    console.log('Error?', !!err);
-    console.log('Response:', response);
-});
+### Static Topography
 
-// Output:
-//
-// Test: { answer: 42 }
-// Error? false
-// Response: { ok: true }
-```
+The simplest topography is static; port locations are well-known, defined up-front, and never change. Services bind to these ports, and Consumers connect to them. Start-up is as fast as possible, but the rigidity is often undesirable.
 
-### Prosumer
+### Dynamic Topography
 
-The Prosumer is both a Service and Consumer in one. It can emit events like a Consumer and listen on events like a Service.
+The most flexible topography is dynamic; port locations for the majority of Services are not well-known, and can change at any time. To facilitate this, N SynchronizationServices (see Discovery) are started at well-known locations, and both Services and Consumers connect to this (via their own SynchronizationConsumer) service to locate one another.
 
-```javascript
-var prosumer1 = new shuttle.Prosumer(),
-    prosumer2 = new shuttle.Prosumer();
+### "Reversed" Topographies
 
-prosumer2.listenForConsumers(5050);
-prosumer1.connectToService(5050);
+Ordinarily, Services bind and Consumers connect. However, _this is not required!_ In some instances, it may be wiser for Consumers to bind and Services to connect. Some examples:
 
-prosumer2.on('test', function (data, callback) {
-    console.log('Test:', data);
-    callback(null, { ok: true });
-});
+ * Dynamic Slaves with a Static Master - N Consumers bind to ports, constantly making requests. Services connect to the Consumer as they start, processing the requests as fast as possible.
+ * Brokers - Although Shuttle is brokerless, simple Brokers can be built _on top of Shuttle._ In this case, the Broker contains N Consumers and a single Service, all of which bind. The rest of the mesh connects.
 
-prosumer1.emit('test', { answer: 42 }, function (err, response) {
-    console.log('Error?', !!err);
-    console.log('Response:', response);
-});
 
-// Output:
-//
-// Test: { answer: 42 }
-// Error? false
-// Response: { ok: true }
-```
 
-### Bridge
+cb = new MIXIN_THING({
+  delimeter: '::' // Looks like EE2!
+})
+cb.emit('service::event', {}, function () {})
 
-When running a lot of Services with a lot of Consumers, the number of interfaces to track can quickly get out of hand. To make life easier, there's the Bridge. Any requests made of the Bridge are passed along, also round-robin, to all connected Services.
+## Thanks
 
-```javascript
-var consumer = new shuttle.Consumer(),
-    bridge = new shuttle.Bridge(),
-    service = new shuttle.Service();
-
-bridge.listenForConsumers(5050);
-bridge.listenForServices(5051);
-
-consumer.connect(5050);
-service.connect(5051);
-
-service.on('test', function (data, callback) {
-    console.log('Test:', data);
-    callback(null, { ok: true });
-});
-
-consumer.emit('test', { answer: 42 }, function (err, response) {
-    console.log('Error?', !!err);
-    console.log('Response:', response);
-});
-
-// Output:
-//
-// Test: { answer: 42 }
-// Error? false
-// Response: { ok: true }
-```
-
-### Router
-
-A Router is just a special bridge that can assign names to the interfaces it exposes to services. Any services that connect to those interfaces can be addressed by clients by name.
-
-```javascript
-var consumer = new shuttle.Consumer(),
-    router = new shuttle.Router(),
-    service = new shuttle.Service();
-
-router.listenForConsumers(5050);
-router.listenForServices('test', 5051);
-
-// Optional, additional settings
-router.delimiter = '/';
-router.trimServiceName = true;
-
-consumer.connect(5050);
-service.connect(5051);
-
-// This service will be addressed by 'test/*', but we'll only get the '*' part.
-service.on('test', function (data, callback) {
-    console.log('Test:', data);
-    callback(null, { ok: true });
-});
-
-consumer.emit('test/test', { answer: 42 }, function (err, response) {
-    console.log('Error?', !!err);
-    console.log('Response:', response);
-});
-
-// As before, our output:
-//
-// Test: { answer: 42 }
-// Error? false
-// Response: { ok: true }
-```
+Kabe & Adam
 
 ## License
 
 ```
-Copyright (C) 2012 Michael Schoonmaker (michael.r.schoonmaker@gmail.com)
+Copyright (C) 2012-2013 Michael Schoonmaker (michael.r.schoonmaker@gmail.com)
 
 This project is free software released under the MIT/X11 license:
 
