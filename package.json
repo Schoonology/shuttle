@@ -1,6 +1,6 @@
 {
   "name": "shuttle",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "A massively-distributable, service-oriented architecture with all the flexibility of Node.",
   "main": "index.js",
   "dependencies": {
