@@ -1,6 +1,6 @@
 # Shuttle
 
-A massively-distributable, service-oriented architecture with all the flexibility of Node.
+A messaging library for shuttling data from A to B (to A) as quickly and simply as possible.
 
 ## Installation
 
@@ -24,7 +24,7 @@ Shuttle officially supports and has been tested over the following transports:
  * IPC (`ipc://`)
  * TCP (`tcp://`)
 
-While these have not been tested, Shuttle may also work over the following transports:
+While these have not been tested, Shuttle may also work over the following transports (as a result of ZeroMQ's support):
 
  * Intra-process (`inproc://`)
  * PGM (`pgm://`)
@@ -32,39 +32,96 @@ While these have not been tested, Shuttle may also work over the following trans
 
 In the remainder of the documentation, "port" refers to a single interface on a single transport, even if that interface is not TPC. If documentation mentions "two ports" and you intend to use IPC, for example, you will need two file descriptors, e.g. `/tmp/a` and `/tmp/b`.
 
-## Mesh
+## Component Types
 
-The Shuttle "mesh" consists of Services and Consumers connected _directly_ to one another, with Consumers making requests and getting updates and Services sending responses and sending updates. Unlike other service-oriented architectures (and early versions of Shuttle), _Shuttle is brokerless._
+Shuttle is nothing more than a set of components that can be thought of as tools in your messaging toolbox. There are three types of messaging abstraction (Request, Broadcast, and Synchronization), each of which handles the sending and receipt of "events".
 
-There are two types of Services, with corresponding Consumers: RequestServices (with RequestConsumers) and SynchronizationServices (with SynchronizationConsumers).
+### Request
 
-There should be a 1:1 relationship between Consumer instances and Service types. A Consumer can be connected to multiple of the same service, but should not be connected to multiple types of Services. Create another Consumer instance for the second Service type needed (and so forth). To make this design restriction easier, MIXIN_THINGs can be used to consolidate multiple Consumer instances into a single, easier-to-use interface. (If desired, the same can be done of Services, even with the same MIXIN_THING.)
+RequestEmitters emit events to connected RequestHandlers, which respond to those events through a provided callback. Request components guarantee that each message _will be delivered_, and to _exactly one peer_. If delivery fails, the callback will receive an error.
 
-### Static Topography
+```
+var emitter = shuttle.createRequestEmitter()
+var handler = shuttle.createRequestHandler()
 
-The simplest topography is static; port locations are well-known, defined up-front, and never change. Services bind to these ports, and Consumers connect to them. Start-up is as fast as possible, but the rigidity is often undesirable.
-
-### Dynamic Topography
-
-The most flexible topography is dynamic; port locations for the majority of Services are not well-known, and can change at any time. To facilitate this, N SynchronizationServices (see Discovery) are started at well-known locations, and both Services and Consumers connect to this (via their own SynchronizationConsumer) service to locate one another.
-
-### "Reversed" Topographies
-
-Ordinarily, Services bind and Consumers connect. However, _this is not required!_ In some instances, it may be wiser for Consumers to bind and Services to connect. Some examples:
-
- * Dynamic Slaves with a Static Master - N Consumers bind to ports, constantly making requests. Services connect to the Consumer as they start, processing the requests as fast as possible.
- * Brokers - Although Shuttle is brokerless, simple Brokers can be built _on top of Shuttle._ In this case, the Broker contains N Consumers and a single Service, all of which bind. The rest of the mesh connects.
-
-
-
-cb = new MIXIN_THING({
-  delimeter: '::' // Looks like EE2!
+handler.listenForRequests({
+  url: SOME_URL
 })
-cb.emit('service::event', {}, function () {})
+emitter.connectForRequests({
+  url: SOME_URL
+})
+
+handler.on('echo', function (data, callback) {
+  callback(null, data)
+})
+
+emitter.emit('echo', {
+  test: true
+}, function (err, response) {
+  console.log(err) // null
+  console.log(response) // { test: true }
+})
+
+emitter.close()
+handler.close()
+```
+
+### Broadcast
+
+BroadcastEmitters emit events to connected BroadcastHanders. Broadcast components do not guarantee delivery, nor do they restrict delivery; each message is sent to as many Handlers as possible.
+
+```
+var emitter = shuttle.createBroadcastEmitter()
+var handler = shuttle.createBroadcastHandler()
+
+emitter.listenForBroadcasts({
+  url: SOME_URL
+})
+
+handler.connectForBroadcasts({
+  url: SOME_URL
+})
+
+handler.on('bcast', function (data) {
+  console.log(data) // { test: true }
+})
+
+emitter.emit('bcast', {
+  test: true
+})
+
+emitter.close()
+handler.close()
+```
+
+### Synchronization
+
+Synchronization components provide a simple example of how to combine Request and Broadcast components together to perform more intersting work. On top of being RequestEmitters and BroadcastHandlers, SynchronizationEmitters can `get` and `set` key:value pairs on their SynchronizationHandler counterparts; which, being RequestHandlers and BroadcastEmitters, store a shared state and update interested SynchronizationEmitters upon success. Additionally, SynchronizationHandlers _are_ SynchronizationEmitters, and can be federated for scalability.
+
+Please see the tests for examples of their usage. While they may be useful in applications, most non-trivial applications will want to roll their own solution using Request and Broadcast components.
+
+## Topological Considerations
+
+### Static Topology
+
+The simplest topology is static; port locations are well-known, defined up-front, and never change. Handlers bind to these ports, and Emitters connect to them. Start-up is as fast as possible, but the rigidity is often undesirable.
+
+### Dynamic Topology
+
+The most flexible topology is dynamic; port locations for the majority of Handlers are not well-known, and can change at any time. To facilitate this, N SynchronizationHandlers can be started at well-known locations, and both Handlers and Emitters connect to this (via their own SynchronizationEmitter) to locate one another through `get` and `set` calls.
+
+### "Reversed" Topologies
+
+Ordinarily, Handlers bind and Emitters connect. However, _this is not required!_ In some instances, it may be wiser for Emitters to bind and Handlers to connect. Some examples:
+
+ * Dynamic Slaves with a Static Master - N RequestEmitters bind to ports, constantly making requests. RequestHandlers connect to the Emitter as they start, processing the requests as fast as possible.
+ * Brokers - Although Shuttle is brokerless, simple Brokers can be built _on top of Shuttle._ In this case, the Broker contains N RequestEmitters and N RequestHandlers, all of which bind. The rest of the mesh connects.
 
 ## Thanks
 
-Kabe & Adam
+A heartfelt thank-you to everyone who used Shuttle early-on, especially [Adam Crabtree](https://github.com/Crabdude) and [mingrobo](https://github.com/mingrobo).
+
+Extra thanks to [kabriel](https://github.com/kabriel) for tempering the ideas in Shuttle with his own experiences.
 
 ## License
 
