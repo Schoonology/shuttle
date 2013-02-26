@@ -117,6 +117,15 @@ Ordinarily, Handlers bind and Emitters connect. However, _this is not required!_
  * Dynamic Slaves with a Static Master - N RequestEmitters bind to ports, constantly making requests. RequestHandlers connect to the Emitter as they start, processing the requests as fast as possible.
  * Brokers - Although Shuttle is brokerless, simple Brokers can be built _on top of Shuttle._ In this case, the Broker contains N RequestEmitters and N RequestHandlers, all of which bind. The rest of the mesh connects.
 
+## Alternatives and Comparisons
+
+It's hard to build a list of alternatives for Shuttle both because there are lots of _messaging_ alternatives and because there are few alternatives that solve identical _problems_. For the reader's sake, however, here are a list of alternatives specifically for messaging and cluster synchronization:
+
+ * [amino](https://github.com/amino/amino)
+ * [federation](https://github.com/jacobgroundwater/federation)
+ * [axon](https://github.com/visionmedia/axon)
+ * [pirate](https://npmjs.org/package/pirate)
+
 ## Thanks
 
 A heartfelt thank-you to everyone who used Shuttle early-on, especially [Adam Crabtree](https://github.com/Crabdude) and [mingrobo](https://github.com/mingrobo).
